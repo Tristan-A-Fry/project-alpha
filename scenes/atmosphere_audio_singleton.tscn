@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://6fxquqxbfjf2"]
+
+[ext_resource type="Script" uid="uid://d2mv7mcf3lt6k" path="res://scripts/atmosphere_loop.gd" id="1_script"]
+[ext_resource type="AudioStream" uid="uid://bm1s1eonpquav" path="res://assets/audio/atmospheres/atmosphere_1.wav" id="2_atmosphere"]
+
+[node name="AtmosphereAudio" type="Node"]
+script = ExtResource("1_script")
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_atmosphere")
+volume_db = -8.587
+autoplay = true
