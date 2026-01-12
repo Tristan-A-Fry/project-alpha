@@ -22,52 +22,80 @@ var mouse_direction: Vector2 = Vector2.DOWN
 var time_since_last_shot: float = 0.0
 var is_shooting: bool = false
 
+# Dash variables
+@export var dash_speed: float = 500.0
+@export var dash_duration: float = 0.15  # How long the dash lasts
+@export var dash_cooldown: float = 0.5  # Cooldown between dashes
+var is_dashing: bool = false
+var dash_timer: float = 0.0
+var dash_cooldown_timer: float = 0.0
+
 func _physics_process(delta):
-	# Update time since last shot
+	# Update timers
 	time_since_last_shot += delta
+	dash_cooldown_timer -= delta
+	
+	# Update dash timer
+	if is_dashing:
+		dash_timer -= delta
+		if dash_timer <= 0.0:
+			is_dashing = false
+			dash_timer = 0.0
 	
 	# Get mouse position in world coordinates
 	var mouse_pos = get_global_mouse_position()
 	mouse_direction = (mouse_pos - global_position).normalized()
 	
-	# Get input direction (8-directional movement with WASD)
+	# Get input direction (8-directional movement with WASD) - needed for animations
 	# W = North (negative Y), A = West (negative X), S = South (positive Y), D = East (positive X)
 	var input_direction = Vector2.ZERO
 	
-	# W = North (move up, negative Y)
-	if Input.is_key_pressed(KEY_W):
-		input_direction.y -= 1.0
-	# S = South (move down, positive Y)
-	if Input.is_key_pressed(KEY_S):
-		input_direction.y += 1.0
-	# A = West (move left, negative X)
-	if Input.is_key_pressed(KEY_A):
-		input_direction.x -= 1.0
-	# D = East (move right, positive X)
-	if Input.is_key_pressed(KEY_D):
-		input_direction.x += 1.0
-	
-	# Normalize to prevent faster diagonal movement
-	input_direction = input_direction.normalized()
-	
-	# Set velocity based on input
-	if input_direction != Vector2.ZERO:
-		velocity = input_direction * speed
-		last_direction = input_direction  # Store direction for idle animations
+	# Handle movement - dash takes priority over normal movement
+	if is_dashing:
+		# During dash, move in mouse direction at dash speed
+		velocity = mouse_direction * dash_speed
+		last_direction = mouse_direction  # Update facing direction
 	else:
-		velocity = velocity.move_toward(Vector2.ZERO, speed)
+		# W = North (move up, negative Y)
+		if Input.is_key_pressed(KEY_W):
+			input_direction.y -= 1.0
+		# S = South (move down, positive Y)
+		if Input.is_key_pressed(KEY_S):
+			input_direction.y += 1.0
+		# A = West (move left, negative X)
+		if Input.is_key_pressed(KEY_A):
+			input_direction.x -= 1.0
+		# D = East (move right, positive X)
+		if Input.is_key_pressed(KEY_D):
+			input_direction.x += 1.0
+		
+		# Normalize to prevent faster diagonal movement
+		input_direction = input_direction.normalized()
+		
+		# Set velocity based on input
+		if input_direction != Vector2.ZERO:
+			velocity = input_direction * speed
+			last_direction = input_direction  # Store direction for idle animations
+		else:
+			velocity = velocity.move_toward(Vector2.ZERO, speed)
 	
 	# Handle shooting
 	handle_shooting()
 	
-	# Update animations
-	update_animations(input_direction)
+	# Update animations - use dash direction if dashing, otherwise use input direction
+	var anim_direction = mouse_direction if is_dashing else input_direction
+	update_animations(anim_direction)
 	
 	# Move the character (use move_and_collide for top-down, or move_and_slide)
 	# For top-down without collisions, we can use move_and_slide which should work fine
 	move_and_slide()
 
 func _input(event):
+	# Handle dash input (Left Shift)
+	if event is InputEventKey:
+		if event.keycode == KEY_SHIFT and event.pressed:
+			start_dash()
+	
 	# Handle mouse wheel zoom
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -80,6 +108,21 @@ func _input(event):
 			var new_zoom = camera.zoom.x + zoom_speed
 			new_zoom = clamp(new_zoom, min_zoom, max_zoom)
 			camera.zoom = Vector2(new_zoom, new_zoom)
+
+func start_dash():
+	# Check if dash is on cooldown
+	if dash_cooldown_timer > 0.0:
+		return
+	
+	# Check if already dashing
+	if is_dashing:
+		return
+	
+	# Start dash
+	is_dashing = true
+	dash_timer = dash_duration
+	dash_cooldown_timer = dash_cooldown
+	last_direction = mouse_direction  # Face dash direction
 
 func handle_shooting():
 	# Check if left mouse button is pressed
