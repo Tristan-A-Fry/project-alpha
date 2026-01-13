@@ -6,12 +6,18 @@ extends CharacterBody2D
 var direction: Vector2 = Vector2.RIGHT
 var age: float = 0.0
 
+@onready var sprite = $Sprite2D
+
 func _ready():
-	# Set the direction if it wasn't set before
-	pass
+	# Rotate sprite to face movement direction
+	if direction.length() > 0:
+		rotation = direction.angle()
 
 func set_direction(new_direction: Vector2):
 	direction = new_direction.normalized()
+	# Update rotation when direction is set
+	if direction.length() > 0:
+		rotation = direction.angle()
 
 func _physics_process(delta):
 	age += delta

@@ -10,6 +10,8 @@ extends CharacterBody2D
 
 @onready var animated_sprite = $AnimatedSprite2D
 @onready var camera = $Camera2D
+@onready var shoot_sound = $AudioStreamPlayer
+
 
 # Store last direction for idle animations
 var last_direction: Vector2 = Vector2.DOWN
@@ -30,10 +32,29 @@ var is_dashing: bool = false
 var dash_timer: float = 0.0
 var dash_cooldown_timer: float = 0.0
 
+#Health variables
+var current_health: float = 100.0
+var max_health: float = 100.0
+
+# Ammo Variables
+@export var magazine_size: int = 20
+var current_ammo: int = 20
+var is_reloading: bool = false
+@export var reload_time: float = 1.5
+var reload_timer: float = 0.0
+
+
 func _physics_process(delta):
 	# Update timers
 	time_since_last_shot += delta
 	dash_cooldown_timer -= delta
+
+	# Update reload timer
+	if is_reloading:
+		reload_timer -= delta
+		if reload_timer <= 0.0:
+			reload_timer = 0.0
+			finish_reload()
 	
 	# Update dash timer
 	if is_dashing:
@@ -95,7 +116,15 @@ func _input(event):
 	if event is InputEventKey:
 		if event.keycode == KEY_SHIFT and event.pressed:
 			start_dash()
+		elif event.keycode == KEY_R and event.pressed:
+			if current_ammo < magazine_size and not is_reloading:
+				start_reload()
 	
+	# Handle reload input (R)
+	if event is InputEventKey:
+		if event.keycode == KEY_R and event.pressed:
+			if current_ammo < magazine_size and not is_reloading:
+				start_reload()
 	# Handle mouse wheel zoom
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -108,6 +137,8 @@ func _input(event):
 			var new_zoom = camera.zoom.x + zoom_speed
 			new_zoom = clamp(new_zoom, min_zoom, max_zoom)
 			camera.zoom = Vector2(new_zoom, new_zoom)
+		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:  #TESTING - Right click to take damage
+			take_damage(10.0)
 
 func start_dash():
 	# Check if dash is on cooldown
@@ -124,7 +155,23 @@ func start_dash():
 	dash_cooldown_timer = dash_cooldown
 	last_direction = mouse_direction  # Face dash direction
 
+# TESTING
+func take_damage(amount: float):
+	current_health -= amount
+	current_health = clamp(current_health, 0.0, max_health)
+
 func handle_shooting():
+	# No shoot if reloading
+	if is_reloading:
+		time_since_last_shot = 0.0 #reset timer
+		return
+
+	# Auto reload if out of ammo
+	if current_ammo <= 0:
+		start_reload()
+		return
+
+
 	# Check if left mouse button is pressed
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		# Update facing direction to mouse while shooting
@@ -139,9 +186,22 @@ func handle_shooting():
 func shoot():
 	if not bullet_scene:
 		return
+
+	if is_reloading:
+		return
+
+	# Check Ammo
+	if current_ammo <= 0:
+		return
+
+	# Decrement each time a bullet is shot	
+	current_ammo -= 1
 	
 	time_since_last_shot = 0.0
 	is_shooting = true
+
+	# Play shoot sound
+	shoot_sound.play()
 	
 	# Create bullet instance
 	var bullet = bullet_scene.instantiate()
@@ -158,6 +218,23 @@ func shoot():
 		bullet.direction = mouse_direction
 	elif "velocity" in bullet:
 		bullet.velocity = mouse_direction * bullet_speed
+
+func start_reload():
+	# Do not reload if already reloading or magazine is full
+	if is_reloading or current_ammo >= magazine_size:
+		return
+
+	# Start reload
+	is_reloading = true
+	reload_timer = reload_time
+	
+	# Play reload sound
+	# reload_sound.play()
+
+func finish_reload():
+	# Re fill the magazine 
+	current_ammo = magazine_size
+	is_reloading = false
 
 func update_animations(direction: Vector2):
 	if not animated_sprite.sprite_frames:
