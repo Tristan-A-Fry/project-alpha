@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 AtmosphereAudio="*res://scenes/atmosphere_audio_singleton.tscn"
+KeybindManager="*res://scripts/keybind_manager.gd"
 
 [display]
 

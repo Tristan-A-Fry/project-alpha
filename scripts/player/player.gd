@@ -13,6 +13,9 @@ extends CharacterBody2D
 @onready var shoot_sound = $AudioStreamPlayer
 @onready var reload_sound = $ReloadSoundPlayer
 
+#
+# Keybinds Manager
+var keybinds_manager: Node = null
 
 # Store last direction for idle animations
 var last_direction: Vector2 = Vector2.DOWN
@@ -44,6 +47,14 @@ var is_reloading: bool = false
 @export var reload_time: float = 1.5
 var reload_timer: float = 0.0
 
+# Dev tools flags
+var infinite_ammo: bool = false
+var infinite_hp: bool = false
+
+func _ready():
+	keybinds_manager = get_node("/root/KeybindManager") if has_node("/root/KeybindManager") else null
+	if not keybinds_manager:
+		keybinds_manager = get_node("/root/KeybindManager") if get_tree().root.has_node("/root/KeybindManager") else null
 
 func _physics_process(delta):
 	# Update timers
@@ -113,16 +124,29 @@ func _physics_process(delta):
 	move_and_slide()
 
 func _input(event):
-	# Handle dash input (Left Shift)
+	# Handle dash input (custom keybind - supports keyboard and mouse)
+	var dash_keycode = KEY_SHIFT  # Default
+	if keybinds_manager:
+		dash_keycode = keybinds_manager.get_keybind("dash")
+	
+	# Check if it's a keyboard key
 	if event is InputEventKey:
-		if event.keycode == KEY_SHIFT and event.pressed:
+		if event.keycode == dash_keycode and event.pressed:
 			start_dash()
 		elif event.keycode == KEY_R and event.pressed:
-			if current_ammo < magazine_size and not is_reloading:
+			if not infinite_ammo and current_ammo < magazine_size and not is_reloading:
 				start_reload()
 	
-	# Handle reload input (R)
-	if event is InputEventKey:
+	# Check if it's a mouse button
+	if event is InputEventMouseButton and event.pressed:
+		# Check if dash_keycode is a mouse button (encoded with offset 1000)
+		if dash_keycode >= 1000:
+			var mouse_button_index = dash_keycode - 1000
+			if event.button_index == mouse_button_index:
+				start_dash()
+	
+	# Handle reload input (R) - skip if infinite ammo
+	if event is InputEventKey and not infinite_ammo:
 		if event.keycode == KEY_R and event.pressed:
 			if current_ammo < magazine_size and not is_reloading:
 				start_reload()
@@ -158,17 +182,19 @@ func start_dash():
 
 # TESTING
 func take_damage(amount: float):
+	if infinite_hp:
+		return
 	current_health -= amount
 	current_health = clamp(current_health, 0.0, max_health)
 
 func handle_shooting():
 	# No shoot if reloading
-	if is_reloading:
+	if is_reloading and not infinite_ammo:
 		time_since_last_shot = 0.0 #reset timer
 		return
 
 	# Auto reload if out of ammo
-	if current_ammo <= 0:
+	if current_ammo <= 0 and not infinite_ammo:
 		start_reload()
 		return
 
@@ -196,7 +222,8 @@ func shoot():
 		return
 
 	# Decrement each time a bullet is shot	
-	current_ammo -= 1
+	if not infinite_ammo:
+		current_ammo -= 1
 	
 	time_since_last_shot = 0.0
 	is_shooting = true
@@ -217,6 +244,12 @@ func shoot():
 		bullet.set_direction(mouse_direction)
 	elif "direction" in bullet:
 		bullet.direction = mouse_direction
+	elif "velocity" in bullet:
+		bullet.velocity = mouse_direction * bullet_speed
+
+	# Set bullet speed
+	if "speed" in bullet:
+		bullet.speed = bullet_speed
 	elif "velocity" in bullet:
 		bullet.velocity = mouse_direction * bullet_speed
 
