@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-@export var speed: float = 500.0
+@export var speed: float = 1000.0
 @export var lifetime: float = 3.0  # How long bullet exists before auto-removing
 
 var direction: Vector2 = Vector2.RIGHT

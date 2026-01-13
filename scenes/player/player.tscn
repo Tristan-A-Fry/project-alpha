@@ -1,4 +1,4 @@
-[gd_scene load_steps=185 format=3 uid="uid://cx8v2laqj5m3n"]
+[gd_scene load_steps=186 format=3 uid="uid://cx8v2laqj5m3n"]
 
 [ext_resource type="Script" uid="uid://dm4mjrjkevtu7" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="Shape2D" path="res://scenes/player/player_collision.tres" id="2_collision"]
@@ -22,6 +22,7 @@
 [ext_resource type="Texture2D" uid="uid://bg3ud4qdbacjc" path="res://assets/tilesets/player/The Male adventurer - Premium/Attack/Gun/Shooting_right_down.png" id="13_j4nxn"]
 [ext_resource type="Texture2D" uid="uid://b8yutapsp4ell" path="res://assets/tilesets/player/The Male adventurer - Premium/Attack/Gun/Shooting_right_up.png" id="14_28m0y"]
 [ext_resource type="Texture2D" uid="uid://bav0e2rbpaxj8" path="res://assets/tilesets/player/The Male adventurer - Premium/Attack/Gun/Shooting_up.png" id="15_uniwh"]
+[ext_resource type="AudioStream" uid="uid://bwxgndi33evfk" path="res://assets/audio/sounds/gun/gun-reload1.mp3" id="X_reload_sound"]
 [ext_resource type="AudioStream" uid="uid://6se4cbcxve74" path="res://assets/audio/sounds/fx-pack-1/WAV/FX_Shoot04.wav" id="X_shoot_sound"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6cv16"]
@@ -1266,3 +1267,7 @@ shape = ExtResource("2_collision")
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("X_shoot_sound")
 volume_db = -11.449
+
+[node name="ReloadSoundPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("X_reload_sound")
+volume_db = -18.128

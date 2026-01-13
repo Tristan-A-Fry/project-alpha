@@ -1,8 +1,7 @@
-[gd_scene load_steps=14 format=3 uid="uid://bwjq8x7vx3k1v"]
+[gd_scene load_steps=13 format=3 uid="uid://bwjq8x7vx3k1v"]
 
 [ext_resource type="PackedScene" uid="uid://cx8v2laqj5m3n" path="res://scenes/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" uid="uid://bxy8k2v3n4m5p" path="res://scenes/bullets/bullet.tscn" id="2_0wfyh"]
-[ext_resource type="PackedScene" path="res://scenes/ui/character_indicator.tscn" id="3_indicator"]
 [ext_resource type="Script" uid="uid://c878wjx6gkyb1" path="res://scripts/ui/hpbar.gd" id="4_jyhfs"]
 [ext_resource type="Texture2D" uid="uid://dvt2g5x1xbc8a" path="res://assets/ui/hpbar/progress-bar-under.png" id="5_o6xl0"]
 [ext_resource type="Texture2D" uid="uid://dqv0dk2atv6jo" path="res://assets/ui/hpbar/progress-bar.png" id="6_tipki"]
@@ -21,9 +20,6 @@ gradient = SubResource("Gradient_0wfyh")
 
 [node name="Player" parent="." instance=ExtResource("1_player")]
 bullet_scene = ExtResource("2_0wfyh")
-
-[node name="CharacterIndicator" parent="." instance=ExtResource("3_indicator")]
-visible = false
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(365, 100)

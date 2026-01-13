@@ -11,6 +11,7 @@ extends CharacterBody2D
 @onready var animated_sprite = $AnimatedSprite2D
 @onready var camera = $Camera2D
 @onready var shoot_sound = $AudioStreamPlayer
+@onready var reload_sound = $ReloadSoundPlayer
 
 
 # Store last direction for idle animations
@@ -229,7 +230,8 @@ func start_reload():
 	reload_timer = reload_time
 	
 	# Play reload sound
-	# reload_sound.play()
+	if reload_sound:
+		reload_sound.play()
 
 func finish_reload():
 	# Re fill the magazine 
