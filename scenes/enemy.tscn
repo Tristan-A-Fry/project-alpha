@@ -1,30 +1,28 @@
-[gd_scene load_steps=13 format=3 uid="uid://bst2ojw1f4k44"]
+[gd_scene load_steps=12 format=3 uid="uid://bst2ojw1f4k44"]
 
 [ext_resource type="Script" uid="uid://ccwv26uiwopyx" path="res://scripts/enemy/enemy.gd" id="1_md0e3"]
 [ext_resource type="Texture2D" uid="uid://3ihxewn1hgua" path="res://assets/ui/Rectangle 4.png" id="2_5uy6h"]
-[ext_resource type="Texture2D" uid="uid://micb5p0i5yt" path="res://assets/ui/ellipse_under.png" id="2_md0e3"]
 [ext_resource type="Texture2D" uid="uid://dc2rxyh3xgf5j" path="res://assets/ui/Rectangle 5.png" id="3_c4w8v"]
-[ext_resource type="Texture2D" uid="uid://w10qc1txkmg6" path="res://assets/ui/Ellipse 1.png" id="5_c4w8v"]
+[ext_resource type="Texture2D" uid="uid://dm1ccn8g0c1wq" path="res://assets/enemy/enemy_1.png" id="4_c4w8v"]
 [ext_resource type="AudioStream" uid="uid://xsmya3uawks" path="res://assets/audio/sounds/hit_sound/hit_2.wav" id="6_xwavj"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_nenq2"]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_c4w8v"]
+radius = 3.5889068
+height = 8.482871
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_xwavj"]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("2_md0e3")
+"texture": ExtResource("4_c4w8v")
 }],
 "loop": true,
 "name": &"defualt",
 "speed": 5.0
 }, {
 "frames": [{
-"duration": 0.2,
-"texture": ExtResource("5_c4w8v")
-}, {
-"duration": 0.1,
-"texture": ExtResource("2_md0e3")
+"duration": 1.0,
+"texture": ExtResource("4_c4w8v")
 }],
 "loop": false,
 "name": &"hurt",
@@ -38,8 +36,9 @@ size = Vector2(20, 25)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_j0cyh"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_xwavj"]
-radius = 31.016125
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_xwavj"]
+radius = 11.0
+height = 26.0
 
 [node name="Enemy" type="CharacterBody2D"]
 collision_layer = 4
@@ -58,9 +57,10 @@ texture_progress_offset = Vector2(1.075, 1.02)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 scale = Vector2(3.065, 3.065)
-shape = SubResource("CircleShape2D_nenq2")
+shape = SubResource("CapsuleShape2D_c4w8v")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+texture_filter = 1
 sprite_frames = SubResource("SpriteFrames_xwavj")
 animation = &"hurt"
 autoplay = "defualt"
@@ -95,10 +95,11 @@ collision_layer = 4
 collision_mask = 3
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HitArea2D"]
-shape = SubResource("CircleShape2D_xwavj")
+shape = SubResource("CapsuleShape2D_xwavj")
 
 [node name="HitSoundPlayer" type="AudioStreamPlayer2D" parent="."]
 stream = ExtResource("6_xwavj")
+volume_db = -21.945
 
 [connection signal="body_entered" from="Area2D" to="." method="_on_area_2d_body_entered"]
 [connection signal="body_entered" from="Area2D/enter_area" to="." method="_on_enter_area_body_entered"]

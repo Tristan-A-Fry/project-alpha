@@ -1,16 +1,19 @@
 extends CanvasLayer
 
-# Preload the dash square scene (you'll create this)
+# Preload the dash square scene
 const DASH_SQUARE_SCENE = preload("res://scenes/ui/dash_square.tscn")
 
 # Container to hold all dash squares
 @onready var dash_container = $DashContainer
 
+# Universal progress bar for regeneration timer (will be created if it doesn't exist)
+var regen_progress_bar: TextureProgressBar = null
+
 # Spacing between dash squares
-@export var dash_spacing: float = 150.0
+@export var dash_spacing: float = 60.0
 
 # References to dynamically created dash squares
-var dash_squares: Array = []  # Array of dictionaries: {sprite: Node, progress_bar: Node}
+var dash_squares: Array = []  # Array of dictionaries: {sprite: Node, progress_bar: Node, instance: Node}
 
 var player: Node = null
 var last_known_max_dashes: int = 0
@@ -27,9 +30,30 @@ func _ready():
 		print("DashIndicator: Could not find player node!")
 		return
 	
+	# Try to find existing progress bar, or create one if it doesn't exist
+	regen_progress_bar = get_node_or_null("RegenProgressBar")
+	if not regen_progress_bar:
+		create_regen_progress_bar()
+	
+	# Initialize progress bar
+	if regen_progress_bar:
+		regen_progress_bar.min_value = 0.0
+		regen_progress_bar.max_value = 100.0
+		regen_progress_bar.value = 0.0  # Start at 0 (no regeneration needed when all dashes are full)
+		regen_progress_bar.visible = true
+	
 	# Wait a frame to ensure player is fully initialized
 	await get_tree().process_frame
 	create_dash_squares()
+
+func create_regen_progress_bar():
+	# Create a vertical progress bar for regeneration timer
+	regen_progress_bar = TextureProgressBar.new()
+	regen_progress_bar.name = "RegenProgressBar"
+	add_child(regen_progress_bar)
+	regen_progress_bar.fill_mode = TextureProgressBar.FILL_BOTTOM_TO_TOP  # Vertical fill from bottom
+	regen_progress_bar.position = Vector2(10, 104)  # Position it near the dash squares
+	regen_progress_bar.size = Vector2(20, 40)  # Small vertical bar
 
 func create_dash_squares():
 	if not player or "max_dashes" not in player:
@@ -70,14 +94,14 @@ func create_dash_square(index: int):
 	var x_position = index * dash_spacing
 	dash_square_instance.position = Vector2(x_position, 0)
 	
-	# Get reference to TextureProgressBar (it serves as both sprite and progress bar)
+	# Get reference to TextureProgressBar (it shows filled/empty state only)
 	var progress_bar = dash_square_instance.get_node_or_null("TextureProgressBar")
 	
 	if not progress_bar:
 		push_warning("DashIndicator: Dash square scene missing TextureProgressBar node!")
 		return
 	
-	# Store references (progress_bar is used for both visual and progress)
+	# Store references
 	var dash_data = {
 		"sprite": progress_bar,
 		"progress_bar": progress_bar,
@@ -86,7 +110,7 @@ func create_dash_square(index: int):
 	dash_squares.append(dash_data)
 	print("DashIndicator: Created dash square ", index, " at position ", dash_square_instance.position, ". Total: ", dash_squares.size())
 	
-	# Initialize progress bar
+	# Initialize progress bar (shows only filled/empty - 100% or 0%)
 	progress_bar.min_value = 0.0
 	progress_bar.max_value = 100.0
 	progress_bar.value = 100.0  # Start at 100% (filled)
@@ -102,43 +126,48 @@ func _process(delta):
 			last_known_max_dashes = player.max_dashes
 			create_dash_squares()
 	
-	# Update display and regeneration progress from player's dash_regen_timers array
-	if "dash_regen_timers" in player and "dash_regen_time" in player:
+	# Update universal regeneration progress bar
+	if "dash_regen_timer" in player and "dash_regen_time" in player:
+		var regen_timer = player.dash_regen_timer
 		var regen_time = player.dash_regen_time
-		update_regen_progress(regen_time)
-	else:
-		# Fallback to old method if dash_regen_timers doesn't exist
-		if "dash_regen_time" in player:
-			var regen_time = player.dash_regen_time
-			update_regen_progress(regen_time, delta)
+		update_regen_progress_bar(regen_timer, regen_time)
+	
+	# Update dash squares (filled/empty state)
+	if "dash_availability" in player:
+		update_dash_squares()
 
-func update_regen_progress(regen_time: float, delta: float = 0.0):
-	# Read regeneration timers directly from player script
-	if not player or "dash_regen_timers" not in player:
+func update_regen_progress_bar(regen_timer: float, regen_time: float):
+	# Update the universal regeneration progress bar
+	if not regen_progress_bar or not is_instance_valid(regen_progress_bar):
 		return
 	
-	var dash_regen_timers = player.dash_regen_timers
+	# Calculate progress percentage (0-100%)
+	var progress_percent = 0.0
+	if regen_time > 0.0:
+		progress_percent = (regen_timer / regen_time) * 100.0
 	
-	# Update each dash square based on player's regeneration timers
+	regen_progress_bar.value = progress_percent
+	regen_progress_bar.visible = true
+
+func update_dash_squares():
+	# Update each dash square to show filled (100%) or empty (0%)
+	if not player or "dash_availability" not in player:
+		return
+	
+	var dash_availability = player.dash_availability
+	
+	# Update each dash square based on availability
 	for i in range(dash_squares.size()):
 		var dash_data = dash_squares[i]
 		if not dash_data or not is_instance_valid(dash_data.progress_bar):
 			continue
 		
-		# Get this dash's regeneration timer from player
-		if i < dash_regen_timers.size():
-			var regen_timer = dash_regen_timers[i]
-			
-			# Calculate progress percentage
-			var progress_percent = (regen_timer / regen_time) * 100.0
-			dash_data.progress_bar.value = progress_percent
-			dash_data.progress_bar.visible = true
+		# Check if this dash is available (filled) or not (empty)
+		if i < dash_availability.size() and dash_availability[i]:
+			# Dash is available - show as filled (100%)
+			dash_data.progress_bar.value = 100.0
 		else:
-			# Dash slot doesn't exist in player's array yet
+			# Dash is not available - show as empty (0%)
 			dash_data.progress_bar.value = 0.0
-			dash_data.progress_bar.visible = true
-
-func update_display():
-	# Display is now handled by update_regen_progress which reads directly from player
-	# This function is kept for compatibility but may not be needed
-	pass
+		
+		dash_data.progress_bar.visible = true

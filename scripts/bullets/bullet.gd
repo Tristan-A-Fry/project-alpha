@@ -31,4 +31,8 @@ func _physics_process(delta):
 	velocity = direction * speed
 	move_and_slide()
 	
-	# Check for collisions (you can add collision detection here later)
+	# Check for collisions with environment
+	if get_slide_collision_count() > 0:
+		# Bullet hit something (environment/wall) - destroy it
+		queue_free()
+		return

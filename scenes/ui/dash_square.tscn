@@ -1,16 +1,15 @@
 [gd_scene load_steps=3 format=3 uid="uid://q737jxjv3yeu"]
 
-[ext_resource type="Texture2D" uid="uid://baucee0t7fenx" path="res://assets/ui/dash/dash_under.png" id="1_xkx2p"]
-[ext_resource type="Texture2D" uid="uid://btv6i7kcx4ydr" path="res://assets/ui/dash/dash_progress.png" id="2_2uxkn"]
+[ext_resource type="Texture2D" uid="uid://buta6k5do6i75" path="res://assets/ui/dash/pixil-frame-0.png" id="1_xkx2p"]
+[ext_resource type="Texture2D" uid="uid://cj3kmwh7auhib" path="res://assets/ui/dash/pixil-frame-0(1).png" id="2_2uxkn"]
 
 [node name="DashSquare" type="Node2D"]
 
 [node name="TextureProgressBar" type="TextureProgressBar" parent="."]
 texture_filter = 1
-offset_top = -1.0
-offset_right = 90.0
-offset_bottom = 89.0
+offset_right = 64.0
+offset_bottom = 64.0
 value = 100.0
 texture_under = ExtResource("1_xkx2p")
 texture_progress = ExtResource("2_2uxkn")
-texture_progress_offset = Vector2(2.06, 1.955)
+texture_progress_offset = Vector2(0.005, 0)

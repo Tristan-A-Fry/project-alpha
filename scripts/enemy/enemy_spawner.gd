@@ -4,7 +4,7 @@ extends Node2D
 @export var target: Node2D  # The player node
 
 # Spawner configuration
-@export var initial_spawn_count: int = 10
+@export var initial_spawn_count: int = 4
 @export var spawn_distance: float = 250.0  # Distance from player
 @export var spawn_distance_variance: float = 100.0  # Random variation in distance
 

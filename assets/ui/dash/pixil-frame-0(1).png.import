@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://btv6i7kcx4ydr"
-path="res://.godot/imported/dash_progress.png-ec6835d94d2b8efb2935d020c43d2e69.ctex"
+uid="uid://cj3kmwh7auhib"
+path="res://.godot/imported/pixil-frame-0(1).png-b684ff15790cf22a1ff16c86fc26f9e3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/dash/dash_progress.png"
-dest_files=["res://.godot/imported/dash_progress.png-ec6835d94d2b8efb2935d020c43d2e69.ctex"]
+source_file="res://assets/ui/dash/pixil-frame-0(1).png"
+dest_files=["res://.godot/imported/pixil-frame-0(1).png-b684ff15790cf22a1ff16c86fc26f9e3.ctex"]
 
 [params]
 

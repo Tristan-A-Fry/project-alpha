@@ -24,13 +24,15 @@ var mouse_direction: Vector2 = Vector2.DOWN
 var is_shooting: bool = false
 
 # Dash variables
+@onready var dash_particles = $DashParticles
 @export var dash_speed: float = 1000.0
-@export var dash_duration: float = 0.3  # How long the dash lasts
+@export var dash_duration: float = 0.4  # How long the dash lasts
 @export var dash_cooldown: float = 0.01  # Cooldown between dashes
-@export var max_dashes: int = 2
+@export var max_dashes: int = 4
 @export var dash_regen_time: float = 3.0
-# Track individual dash regeneration - array of timers, one per dash slot
-var dash_regen_timers: Array = []  # Array of floats, one timer per dash slot
+# Track dash availability - array of booleans, true means dash is available
+var dash_availability: Array = []  # Array of bools, true = dash available
+var dash_regen_timer: float = 0.0  # Single universal regeneration timer
 var is_dashing: bool = false
 var dash_timer: float = 0.0
 var dash_cooldown_timer: float = 0.0
@@ -41,7 +43,7 @@ var current_dashes: int:
 	get:
 		var count = 0
 		for i in range(max_dashes):
-			if i < dash_regen_timers.size() and dash_regen_timers[i] >= dash_regen_time:
+			if i < dash_availability.size() and dash_availability[i]:
 				count += 1
 		return count
 
@@ -61,27 +63,54 @@ func _ready():
 	if not gun:
 		push_warning("Player: Gun node not found! Make sure to add the Gun scene as a child of Player.")
 	
-	# Initialize dash regeneration timers (all start at max, meaning all dashes are available)
-	dash_regen_timers.clear()
+	# Initialize dash availability (all dashes start as available)
+	dash_availability.clear()
+	dash_regen_timer = 0.0  # Start with timer at 0 (no regeneration needed when all dashes are full)
 	for i in range(max_dashes):
-		dash_regen_timers.append(dash_regen_time)  # Start at max = dash is available
+		dash_availability.append(true)  # All dashes available at start
+	
+	# Initialize dash particles - ensure they start disabled
+	if dash_particles:
+		dash_particles.emitting = false
 
 func _physics_process(delta):
 	# Update timers
 	dash_cooldown_timer -= delta
 
-	# Update individual dash regeneration timers
-	# Ensure array size matches max_dashes
-	while dash_regen_timers.size() < max_dashes:
-		dash_regen_timers.append(0.0)
+	# Ensure dash_availability array size matches max_dashes
+	while dash_availability.size() < max_dashes:
+		dash_availability.append(true)
 	
-	# Regenerate each dash independently
+	# Check if we have any empty dashes (need to regenerate)
+	var has_empty_dashes = false
 	for i in range(max_dashes):
-		if dash_regen_timers[i] < dash_regen_time:
-			dash_regen_timers[i] += delta
-			# Clamp to max regeneration time
-			if dash_regen_timers[i] > dash_regen_time:
-				dash_regen_timers[i] = dash_regen_time
+		if not dash_availability[i]:
+			has_empty_dashes = true
+			break
+	
+	# Update universal regeneration timer
+	if has_empty_dashes:
+		# If dash_regen_time is 0, instantly fill all empty dashes
+		if dash_regen_time <= 0.0:
+			# Instant regeneration - fill all empty dashes immediately
+			for i in range(max_dashes):
+				if not dash_availability[i]:
+					dash_availability[i] = true
+			dash_regen_timer = 0.0
+		else:
+			# Timer is running - increment it
+			dash_regen_timer += delta
+			# When timer completes, fill ALL empty dashes
+			if dash_regen_timer >= dash_regen_time:
+				# Fill all empty dashes
+				for i in range(max_dashes):
+					if not dash_availability[i]:
+						dash_availability[i] = true
+				# Reset timer
+				dash_regen_timer = 0.0
+	else:
+		# All dashes are full, reset timer to 0
+		dash_regen_timer = 0.0
 	
 	# Update dash timer
 	if is_dashing:
@@ -90,14 +119,9 @@ func _physics_process(delta):
 			is_dashing = false
 			dash_timer = 0.0
 			infinite_hp = false
-	
-	# Update dash timer
-	if is_dashing:
-		dash_timer -= delta
-		if dash_timer <= 0.0:
-			is_dashing = false
-			dash_timer = 0.0
-			infinite_hp = false
+			# Stop particles when dash ends
+			if dash_particles:
+				dash_particles.emitting = false
 	
 	# Get mouse position in world coordinates
 	var mouse_pos = get_global_mouse_position()
@@ -187,14 +211,14 @@ func start_dash():
 	if is_dashing:
 		return
 	
-	# Find the rightmost available dash (highest index that is full/available)
+	# Find the rightmost available dash (highest index that is available)
 	var dash_to_use: int = -1
 	for i in range(max_dashes - 1, -1, -1):  # Iterate backwards from rightmost
 		# Ensure array is large enough
-		if i >= dash_regen_timers.size():
+		if i >= dash_availability.size():
 			continue
-		# Check if this dash is available (timer >= regen_time means it's ready)
-		if dash_regen_timers[i] >= dash_regen_time:
+		# Check if this dash is available
+		if dash_availability[i]:
 			dash_to_use = i
 			break
 	
@@ -219,8 +243,10 @@ func start_dash():
 	
 	dash_direction = input_direction
 
-	# Consume the rightmost available dash (reset its timer to 0)
-	dash_regen_timers[dash_to_use] = 0.0
+	# Consume the rightmost available dash (set it to false)
+	dash_availability[dash_to_use] = false
+	# If timer wasn't running, it will start automatically on next frame
+	# (Timer doesn't reset when using a dash - it keeps filling)
 	
 	# Start dash
 	is_dashing = true
@@ -228,6 +254,17 @@ func start_dash():
 	dash_cooldown_timer = dash_cooldown
 	last_direction = mouse_direction  # Face dash direction
 	infinite_hp = true
+	
+	# Start dash particles (emission only - particle properties configured in editor)
+	if dash_particles:
+		# Flip particles based on dash direction (same as sprite flip logic)
+		if dash_direction.x < 0:
+			dash_particles.scale.x = -1  # Flip horizontally when dashing left
+		else:
+			dash_particles.scale.x = 1   # Normal when dashing right
+		
+		dash_particles.restart()
+		dash_particles.emitting = true
 
 # TESTING
 func take_damage(amount: float):
@@ -251,12 +288,11 @@ func update_animations(direction: Vector2):
 	var is_moving = velocity.length() > 0
 	# var is_shooting_button = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	
-	# If shooting (mouse button held), use shoot animation based on mouse direction
-	# Character faces mouse direction regardless of movement direction
-	if is_dashing:
-		anim_name = "dash"
+	# Dash animation removed - using particles instead
+	# if is_dashing:
+	# 	anim_name = "dash"
 
-	elif is_moving:
+	if is_moving:
 		anim_name = get_direction_animation(direction, "walk")
 		last_direction = direction
 	else:
@@ -265,10 +301,6 @@ func update_animations(direction: Vector2):
 	if anim_name != "" and animated_sprite.sprite_frames.has_animation(anim_name):
 		if animated_sprite.animation != anim_name:
 			animated_sprite.play(anim_name)
-	else:
-		# Debug: print if animation doesn't exist
-		if anim_name == "dash":
-			print("Warning: 'dash' animation not found in sprite_frames!")
 
 func get_direction_animation(dir: Vector2, anim_type: String) -> String:
 	var prefix = anim_type  # "walk", "idle", or "shoot"

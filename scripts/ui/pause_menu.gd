@@ -21,14 +21,15 @@ var current_menu: MenuState = MenuState.MAIN
 @onready var bullet_velocity_label = dev_tools_menu.get_node_or_null("BulletVelocityLabel")
 @onready var fire_rate_slider = dev_tools_menu.get_node_or_null("FireRateSlider")
 @onready var fire_rate_label = dev_tools_menu.get_node_or_null("FireRateLabel")
-@onready var infinite_ammo_checkbox = dev_tools_menu.get_node_or_null("InfiniteAmmoCheckBox")
 @onready var infinite_hp_checkbox = dev_tools_menu.get_node_or_null("InfiniteHPCheckBox")
+@onready var no_dash_regen_checkbox = dev_tools_menu.get_node_or_null("NoDashRegenCheckBox")
 @onready var reset_all_button = dev_tools_menu.get_node_or_null("ResetAllButton")
 
 # Default values
 var default_player_speed: float = 200.0
 var default_bullet_velocity: float = 1000.0
 var default_fire_rate: float = 0.2
+var default_dash_regen_time: float = 3.0
 
 # Keybind Menu UI references
 @onready var dash_keybind_button = keybinds_menu.get_node_or_null("DashKeybindButton")
@@ -118,15 +119,19 @@ func _ready():
 			fire_rate_slider.value = default_fire_rate
 		_update_fire_rate_label()
 	
-	if infinite_ammo_checkbox:
-		infinite_ammo_checkbox.toggled.connect(_on_infinite_ammo_toggled)
-		if gun and "infinite_ammo" in gun:
-			infinite_ammo_checkbox.button_pressed = gun.infinite_ammo
-	
 	if infinite_hp_checkbox:
 		infinite_hp_checkbox.toggled.connect(_on_infinite_hp_toggled)
 		if player and "infinite_hp" in player:
 			infinite_hp_checkbox.button_pressed = player.infinite_hp
+	
+	if no_dash_regen_checkbox:
+		no_dash_regen_checkbox.toggled.connect(_on_no_dash_regen_toggled)
+		if player and "dash_regen_time" in player:
+			# Check if dash_regen_time is 0 (no regen enabled)
+			no_dash_regen_checkbox.button_pressed = (player.dash_regen_time == 0.0)
+		# Store default value if not already stored
+		if player and "dash_regen_time" in player:
+			default_dash_regen_time = player.dash_regen_time
 	
 	if reset_all_button:
 		reset_all_button.pressed.connect(reset_all_to_defaults)
@@ -269,19 +274,24 @@ func _on_fire_rate_changed(value: float):
 		gun.fire_rate = value
 	_update_fire_rate_label()
 
-func _on_infinite_ammo_toggled(pressed: bool):
-	if gun:
-		if "infinite_ammo" not in gun:
-			gun.set("infinite_ammo", pressed)
-		else:
-			gun.infinite_ammo = pressed
-
 func _on_infinite_hp_toggled(pressed: bool):
 	if player:
 		if "infinite_hp" not in player:
 			player.set("infinite_hp", pressed)
 		else:
 			player.infinite_hp = pressed
+
+func _on_no_dash_regen_toggled(pressed: bool):
+	if player and "dash_regen_time" in player:
+		if pressed:
+			# Store current value as default if it's not 0
+			if player.dash_regen_time > 0.0:
+				default_dash_regen_time = player.dash_regen_time
+			# Set to 0 for instant regeneration
+			player.dash_regen_time = 0.0
+		else:
+			# Restore default value
+			player.dash_regen_time = default_dash_regen_time
 
 func _update_player_speed_label():
 	if player_speed_label and player_speed_slider:
@@ -311,10 +321,13 @@ func reset_all_to_defaults():
 	reset_player_speed()
 	reset_bullet_velocity()
 	reset_fire_rate()
-	if infinite_ammo_checkbox:
-		infinite_ammo_checkbox.button_pressed = false
 	if infinite_hp_checkbox:
 		infinite_hp_checkbox.button_pressed = false
+	if no_dash_regen_checkbox:
+		no_dash_regen_checkbox.button_pressed = false
+		# Restore default dash regen time
+		if player and "dash_regen_time" in player:
+			player.dash_regen_time = default_dash_regen_time
 
 # Keybind functions
 func _on_dash_keybind_button_pressed():
