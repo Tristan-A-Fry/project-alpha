@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 # Player movement variables for top-down view
-@export var speed: float = 200.0
+@export var speed: float = 400.0
 
 # Camera zoom variables
 @export var min_zoom: float = 0.1
@@ -24,13 +24,26 @@ var mouse_direction: Vector2 = Vector2.DOWN
 var is_shooting: bool = false
 
 # Dash variables
-@export var dash_speed: float = 500.0
+@export var dash_speed: float = 1000.0
 @export var dash_duration: float = 0.3  # How long the dash lasts
-@export var dash_cooldown: float = 0.5  # Cooldown between dashes
+@export var dash_cooldown: float = 0.01  # Cooldown between dashes
+@export var max_dashes: int = 2
+@export var dash_regen_time: float = 3.0
+# Track individual dash regeneration - array of timers, one per dash slot
+var dash_regen_timers: Array = []  # Array of floats, one timer per dash slot
 var is_dashing: bool = false
 var dash_timer: float = 0.0
 var dash_cooldown_timer: float = 0.0
 var dash_direction: Vector2 = Vector2.ZERO # Store direction of dash start
+
+# Computed property for current_dashes (for compatibility with UI scripts)
+var current_dashes: int:
+	get:
+		var count = 0
+		for i in range(max_dashes):
+			if i < dash_regen_timers.size() and dash_regen_timers[i] >= dash_regen_time:
+				count += 1
+		return count
 
 #Health variables
 var current_health: float = 100.0
@@ -47,10 +60,28 @@ func _ready():
 	# Initialize gun if it exists
 	if not gun:
 		push_warning("Player: Gun node not found! Make sure to add the Gun scene as a child of Player.")
+	
+	# Initialize dash regeneration timers (all start at max, meaning all dashes are available)
+	dash_regen_timers.clear()
+	for i in range(max_dashes):
+		dash_regen_timers.append(dash_regen_time)  # Start at max = dash is available
 
 func _physics_process(delta):
 	# Update timers
 	dash_cooldown_timer -= delta
+
+	# Update individual dash regeneration timers
+	# Ensure array size matches max_dashes
+	while dash_regen_timers.size() < max_dashes:
+		dash_regen_timers.append(0.0)
+	
+	# Regenerate each dash independently
+	for i in range(max_dashes):
+		if dash_regen_timers[i] < dash_regen_time:
+			dash_regen_timers[i] += delta
+			# Clamp to max regeneration time
+			if dash_regen_timers[i] > dash_regen_time:
+				dash_regen_timers[i] = dash_regen_time
 	
 	# Update dash timer
 	if is_dashing:
@@ -58,6 +89,15 @@ func _physics_process(delta):
 		if dash_timer <= 0.0:
 			is_dashing = false
 			dash_timer = 0.0
+			infinite_hp = false
+	
+	# Update dash timer
+	if is_dashing:
+		dash_timer -= delta
+		if dash_timer <= 0.0:
+			is_dashing = false
+			dash_timer = 0.0
+			infinite_hp = false
 	
 	# Get mouse position in world coordinates
 	var mouse_pos = get_global_mouse_position()
@@ -147,13 +187,47 @@ func start_dash():
 	if is_dashing:
 		return
 	
-	dash_direction = mouse_direction.normalized()
+	# Find the rightmost available dash (highest index that is full/available)
+	var dash_to_use: int = -1
+	for i in range(max_dashes - 1, -1, -1):  # Iterate backwards from rightmost
+		# Ensure array is large enough
+		if i >= dash_regen_timers.size():
+			continue
+		# Check if this dash is available (timer >= regen_time means it's ready)
+		if dash_regen_timers[i] >= dash_regen_time:
+			dash_to_use = i
+			break
+	
+	# Check if we have any dash available
+	if dash_to_use == -1:
+		return
+	
+	var input_direction = Vector2.ZERO
 
+	if Input.is_key_pressed(KEY_W):
+		input_direction.y -= 1.0
+	if Input.is_key_pressed(KEY_S):
+		input_direction.y += 1.0
+	if Input.is_key_pressed(KEY_A):
+		input_direction.x -= 1.0
+	if Input.is_key_pressed(KEY_D):
+		input_direction.x += 1.0
+	
+	input_direction = input_direction.normalized()
+	if input_direction == Vector2.ZERO:
+		input_direction = Vector2.DOWN
+	
+	dash_direction = input_direction
+
+	# Consume the rightmost available dash (reset its timer to 0)
+	dash_regen_timers[dash_to_use] = 0.0
+	
 	# Start dash
 	is_dashing = true
 	dash_timer = dash_duration
 	dash_cooldown_timer = dash_cooldown
 	last_direction = mouse_direction  # Face dash direction
+	infinite_hp = true
 
 # TESTING
 func take_damage(amount: float):
@@ -168,6 +242,11 @@ func update_animations(direction: Vector2):
 	if not animated_sprite.sprite_frames:
 		return
 	
+	if mouse_direction.x < 0:
+		animated_sprite.flip_h = true
+	else:
+		animated_sprite.flip_h = false
+	
 	var anim_name: String = ""
 	var is_moving = velocity.length() > 0
 	# var is_shooting_button = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
@@ -176,9 +255,7 @@ func update_animations(direction: Vector2):
 	# Character faces mouse direction regardless of movement direction
 	if is_dashing:
 		anim_name = "dash"
-	# elif is_shooting_button:
-	# 	anim_name = get_direction_animation(mouse_direction, "shoot")
-	# 	last_direction = mouse_direction  # Update facing direction to mouse
+
 	elif is_moving:
 		anim_name = get_direction_animation(direction, "walk")
 		last_direction = direction
@@ -228,34 +305,3 @@ func get_direction_animation(dir: Vector2, anim_type: String) -> String:
 				return prefix + " left down"
 			else:
 				return prefix + " right down"
-
-# func get_shoot_direction_animation(dir: Vector2) -> String:
-# 	# For shooting, we have 8 directions including pure left/right
-# 	var abs_x = abs(dir.x)
-# 	var abs_y = abs(dir.y)
-# 	var threshold = 0.5  # Threshold for pure directions
-	
-# 	# Check for pure vertical (up/down)
-# 	if abs_x < threshold:
-# 		if dir.y < 0:
-# 			return "shoot up"
-# 		else:
-# 			return "shoot down"
-# 	# Check for pure horizontal (left/right)
-# 	elif abs_y < threshold:
-# 		if dir.x < 0:
-# 			return "shoot left"
-# 		else:
-# 			return "shoot right"
-# 	# Diagonals
-# 	else:
-# 		if dir.y < 0:  # Upper half
-# 			if dir.x < 0:
-# 				return "shoot left up"
-# 			else:
-# 				return "shoot right up"
-# 		else:  # Lower half
-# 			if dir.x < 0:
-# 				return "shoot left down"
-# 			else:
-# 				return "shoot right down"

@@ -5,8 +5,8 @@ extends Node2D
 
 # Spawner configuration
 @export var initial_spawn_count: int = 10
-@export var spawn_distance: float = 500.0  # Distance from player
-@export var spawn_distance_variance: float = 50.0  # Random variation in distance
+@export var spawn_distance: float = 250.0  # Distance from player
+@export var spawn_distance_variance: float = 100.0  # Random variation in distance
 
 func _ready():
 	# Wait a frame to ensure everything is initialized 
