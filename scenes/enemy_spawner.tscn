@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://bx2xod8ow3jd0"]
+
+[ext_resource type="Script" uid="uid://b5t7jxcutnxb0" path="res://scripts/enemy/enemy_spawner.gd" id="1_ks1gq"]
+[ext_resource type="PackedScene" uid="uid://bst2ojw1f4k44" path="res://scenes/enemy.tscn" id="2_devoi"]
+
+[node name="enemy_spawner" type="Node2D"]
+visible = false
+script = ExtResource("1_ks1gq")
+enemy_prefab = ExtResource("2_devoi")
+
+[node name="Timer" type="Timer" parent="."]
+autostart = true
