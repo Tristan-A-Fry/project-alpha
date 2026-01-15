@@ -31,6 +31,12 @@ project/assembly_name="project-alpha"
 project/solution_name="project-alpha"
 tools/editor/external_editor_executable=""
 
+[layer_names]
+
+2d_physics/layer_1="Environment"
+2d_physics/layer_2="Player"
+2d_physics/layer_3="Enemy"
+
 [rendering]
 
 textures/canvas_textures/default_texture_filter=2

@@ -9,7 +9,7 @@ extends Node2D
 @export var spawn_distance_variance: float = 50.0  # Random variation in distance
 
 func _ready():
-	# Wait a frame to ensure everything is initialized
+	# Wait a frame to ensure everything is initialized 
 	call_deferred("spawn_initial_enemies")
 
 func spawn_initial_enemies():

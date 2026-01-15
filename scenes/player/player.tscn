@@ -924,6 +924,8 @@ animations = [{
 
 [node name="Player" type="CharacterBody2D"]
 position = Vector2(957, 539)
+collision_layer = 2
+collision_mask = 5
 up_direction = Vector2(0, 1)
 script = ExtResource("1_player")
 
@@ -936,7 +938,7 @@ frame = 7
 frame_progress = 1.0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(-1, 8)
+position = Vector2(-5, 13.5)
 shape = ExtResource("2_collision")
 
 [node name="Camera2D" type="Camera2D" parent="."]

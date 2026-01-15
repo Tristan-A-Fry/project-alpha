@@ -3,6 +3,9 @@ extends CharacterBody2D
 @onready var player_node: CharacterBody2D = get_parent().get_node("Player")
 @onready var progress_bar = $TextureProgressBar
 @onready var animated_sprite = $AnimatedSprite2D
+@onready var hit_sound = $HitSoundPlayer
+@onready var hit_area = $HitArea2D
+
 
 var speed: float = 100.0
 var should_chase: bool = false
@@ -22,7 +25,6 @@ func _ready():
 	progress_bar.value = current_health
 	progress_bar.exp_edit = false
 	
-	var hit_area = get_node_or_null("HitArea2D")
 	if hit_area:
 		hit_area.collision_mask = 2
 		hit_area.body_entered.connect(_on_hit_area_body_entered)
@@ -63,10 +65,33 @@ func take_damage(amount: float):
 	progress_bar.value = current_health
 
 	play_hurt_animation()
+	if hit_sound:
+		hit_sound.play()
 	
 	# Check if enemy is dead
 	if current_health <= 0.0:
-		die()
+		# Disable collision so bullets pass through
+		if hit_area:
+			hit_area.set_deferred("monitoring", false)
+			hit_area.set_deferred("monitorable", false)
+		
+		# Also disable the main Area2D for player collision
+		var main_area = get_node_or_null("Area2D")
+		if main_area:
+			main_area.set_deferred("monitoring", false)
+			main_area.set_deferred("monitorable", false)
+		
+		if hit_sound and hit_sound.playing:
+			# ADD death animation here
+			speed = 0
+			hit_sound.finished.connect(_on_hit_sound_finished)
+		else:
+			# Sound not playing or doesn't exist, die immediately
+			die()
+
+func _on_hit_sound_finished():
+	# Called when hit sound finishes playing
+	die()
 
 func _on_hit_area_body_entered(body: Node2D):
 	# Check if the body is a bullet (simpler check)
